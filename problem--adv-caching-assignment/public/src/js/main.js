@@ -18,7 +18,9 @@ button.addEventListener('click', function(event) {
   }
 });
 
-fetch('https://httpbin.org/ip')
+var url = 'https://httpbin.org/ip'
+var networkResponse = false
+fetch(url)
   .then(function(res) {
     return res.json();
   })
@@ -26,3 +28,19 @@ fetch('https://httpbin.org/ip')
     console.log(data.origin);
     box.style.height = (data.origin.substr(0, 2) * 5) + 'px';
   });
+
+if('caches' in window){
+  caches.match(url)
+  .then(res=>{
+    if(res){
+      res.json()
+    }
+  })
+  .then(data=>{
+    console.log('Data from cache ', data);
+    if(!networkResponse){
+    box.style.height = (data.origin.substr(0, 2) * 20) + 'px';
+
+    }
+  })
+}
