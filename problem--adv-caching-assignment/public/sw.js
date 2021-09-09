@@ -14,20 +14,20 @@ var STATIC_FILES= [
           'https://fonts.googleapis.com/icon?family=Material+Icons',
           'https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.indigo-pink.min.css'
         ]
-self.addEventListener('install', function(event) {
-  event.waitUntil(
+self.addEventListener('install', e=> {
+  e.waitUntil(
     caches.open(CACHE_STATIC_NAME)
-      .then(function(cache) {
+      .then(cache=> {
         cache.addAll(STATIC_FILES);
       })
   )
 });
 
-self.addEventListener('activate', function(event) {
-  event.waitUntil(
+self.addEventListener('activate', e=> {
+  e.waitUntil(
     caches.keys()
-      .then(function(keyList) {
-        return Promise.all(keyList.map(function(key) {
+      .then(keyList=> {
+        return Promise.all(keyList.map(key=> {
           if (key !== CACHE_STATIC_NAME) {
             return caches.delete(key);
           }
@@ -52,26 +52,7 @@ self.addEventListener('fetch', e=>{
   // va a buscar info en la cache y espera la respuesta. Si no hay respuesta,
   // actualiza la respuesta con la response del fetch(event.request)
   
-//   e.respondWith(
-//     caches.match(e.request)
-//       .then(function(response) {
-//         if (response) {
-//           return response;
-//         } else {
-//           return fetch(e.request)
-//             .then(function(res) {
-//               return caches.open(CACHE_DYNAMIC_NAME)
-//                 .then(function(cache) {
-//                   cache.put(e.request.url, res.clone());
-//                   return res;
-//                 });
-//             })
-//             .catch(function(err) {
-//                return caches.match(e.request)
-//             });
-//         }
-//       })
-//   );
+
           // --------------------------------------
 
   //   2 - Network only
@@ -103,61 +84,71 @@ self.addEventListener('fetch', e=>{
         // --------------------------------------
 
   // 5- Cache with network fallback
-  //   //Verificamos que exista 
-  //   const cwnf = caches.match(e.request)
-  //   .then(res=>{
-  //     if(res) return res;
-  //     //si no existe
-  //     console.log('No existe '+ e.request.url);  
-  //     //buscamos el archivo con un fetch
-  //     return fetch(e.request)
-  //             .then(newRes => {
-  //               caches.open(CACHE_STATIC_NAME)
-  //               .then(cache =>{
-  //                 cache.put(e.request, newRes)
-  //               })
-  //               return newRes.clone()
-  //             })    
-  //   })
-  //   e.respondWith(cwnf)
-  // })
+  //   e.respondWith(
+//     caches.match(e.request)
+//       .then(res =>{
+//               return caches.open(CACHE_DYNAMIC_NAME)
+//                 .then(cache => {
+//                   cache.put(e.request.url, res.clone());
+//                   return res;
+//                 });
+//             })
+//             .catch(error=> {
+//                return caches.match(e.request)
+//             });
+//            .catch(error=>  {
+//              return caches.open(CACHE_STATIC_NAME)
+//                .then(cache => {
+//                if (e.request.headers.get('accept').includes('text/html')) {
+//                return cache.match('/offline.html');
+//             }
+
+//         }
+//       })
+//   );
 
   // 6 - 
-// if(e.request.url.indexOf('https://httpbin.org/ip')> 1){
-//   e.respondWith(
-//     caches.open(CACHE_DYNAMIC_NAME)
-//     .then(cache => {
-//       return fetch(e.request)
-//       .then(res=>{
-//         cache.put(e.request.url, res.clone())
-//       })
-//     })
-//   )
-// }
-// else if(isInArray(e.request.url,STATIC_FILES)){
-//   e.respondWith(
-//     caches.match(e.request)
-//   )
-// }
-// else{
-//   e.respondWith(
-//     caches.match(e.request)
-//     .then(res=>{
-//       if(res) return res;
-//       else{
-//         return fetch(e.request)
-//         .then(res=>{
-//           return caches.open(CACHE_DYNAMIC_NAME)
-//           .then(cache=>{
-//             cache.put(e.request.url, res.clone())
-//             return res
-//           })
-//         })
-//         .catch(err=>{
-//           return caches.match('/offline.html')
-//         })
-//       }
-//     })
-//   )
-// }
+
+  var url = 'https://httpbin.org/ip';
+  if (e.request.url.indexOf(url) > -1) {
+    e.respondWith(
+      fetch(e.request)
+          .then( res=> {
+            return caches.open(CACHE_DYNAMIC_NAME)
+              .then(cache=> {
+                cache.put(e.request.url, res.clone());
+                return res;
+              })
+          })
+    );
+  } else if (isInArray(e.request.url, STATIC_FILES)) {
+    e.respondWith(
+      caches.match(e.request)
+    );
+  } else {
+    e.respondWith(
+      caches.match(e.request)
+        .then(response=> {
+          if (response) return response;
+          else {
+            return fetch(e.request)
+              .then(res=> {
+                return caches.open(CACHE_DYNAMIC_NAME)
+                  .then(cache=> {
+                    cache.put(e.request.url, res.clone());
+                    return res;
+                  })
+              })
+              .catch(error=> {
+                return caches.open(CACHE_STATIC_NAME)
+                  .then(cache=> {
+                    if (e.request.headers.get('accept').includes('text/html')) {
+                      return cache.match('/offline.html');
+                    }
+                  });
+              });
+          }
+        })
+    );
+  }
 })
